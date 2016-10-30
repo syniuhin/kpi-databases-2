@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+{% load staticfiles %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>New photo</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+    <link href="/static/css/bootstrap.css" rel="stylesheet"
+          type="text/css"/>
+    <script src="/static/js/bootstrap.js"></script>
+    {{ form.media }}
+</head>
+<body>
+<h1 class="text-center">Photo</h1>
+<style>
+    .form-photo {
+        max-width: 550px;
+        padding: 15px;
+        margin: 0 auto;
+    }
+</style>
+<div class="row">
+    <div class="col-lg-4"></div>
+    <div class="col-lg-4">
+        <form action="{{ action_url }}" method="post">
+            {% load bootstrap %}
+            {% csrf_token %}
+            {{ form|bootstrap }}
+            <div class="form-group text-center">
+                <button type="submit" class="btn btn-primary">Submit</button>
+            </div>
+        </form>
+    </div>
+    <div class="col-lg-4"></div>
+    </form>
+</div>
+</form>
+</body>
+</html>

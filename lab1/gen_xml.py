@@ -2,7 +2,7 @@ from lxml import etree
 from lxml.html.clean import clean_html
 import urllib2
 
-BASE_URL = 'http://www.stejka.com/'
+BASE_URL = 'http://www.stejka.com'
 
 
 def process_text(text_lst):
@@ -14,14 +14,14 @@ def process_text(text_lst):
 
 
 def process_images(images):
-  return map(lambda img: img if img.startswith("http") else BASE_URL + img[1:],
+  return map(lambda img: img if img.startswith("http") else BASE_URL + img,
              images)
 
 
 def process_urls(urls):
   urls = list(set(urls))
   urls = filter(lambda x: len(x) > 3 and x[0] == "/", urls)
-  urls = map(lambda x: BASE_URL + x[1:], urls)
+  urls = map(lambda x: BASE_URL + x, urls)
   return urls
 
 

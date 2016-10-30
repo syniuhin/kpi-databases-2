@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Filter photos</title>
+    <script src="/static/jquery/dist/jquery.js"></script>
+    <script type="text/javascript"
+            src="/static/bootstrap/dist/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="/static/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet"
+          href="/static/bootstrap/dist/css/bootstrap-theme.min.css">
+</head>
+<body>
+<h1 class="text-center">Location</h1>
+<form class="form-horizontal text-center" action="/location/list/filter"
+      method="post" style="margin: 20px;">
+    {% load bootstrap %}
+    {% csrf_token %}
+    {{ form }}
+    <button type="submit" class="btn btn-xs">Filter</button>
+</form>
+<div class="col-lg-12">
+    <div class="table-responsive">
+        <table class="table table-responsive table-bordered table-hover table-striped tablesorter">
+            <thead>
+            <tr>
+                <th class="header"> Name <i class="icon-sort"></i></th>
+                <th class="header"> Latitude <i class="icon-sort"></i></th>
+                <th class="header"> Longitude <i class="icon-sort"></i>
+                <th class="header"> Accessible <i class="icon-sort"></i>
+                </th>
+            </tr>
+            </thead>
+            <tbody>
+
+            {% for location in object_list %}
+                <tr>
+                    <td>{{ location.name }}</td>
+                    <td>{{ location.lat }}</td>
+                    <td>{{ location.lng }}</td>
+                    <td>{{ location.accessible }}</td>
+                </tr>
+            {% endfor %}
+
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>
