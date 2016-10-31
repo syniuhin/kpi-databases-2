@@ -1,7 +1,7 @@
 from django.conf.urls import url
 
 from . import views
-from .views import PhotoController, PhotoListView, PAListView, PPListView
+from .views import AggregateListView, PhotoController, PhotoListView, PAListView, PPListView
 
 urlpatterns = [
     url(r'^$', views.index, name='index'),
@@ -16,6 +16,7 @@ urlpatterns = [
         views.PhotoController.delete,
         name='delete_photo'),
     url(r'^photo/list/?$', PhotoListView.as_view(), name='photo_list'),
+    url(r'^camera/trusted/?$', AggregateListView.as_view(), name='tc_list'),
     url(r'^photographer/apertures/?$', PAListView.as_view(), name='pa_list'),
     url(r'^photographer/shots/?$', PPListView.as_view(), name='pp_list'),
 ]

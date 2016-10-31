@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 
 from bson.code import Code
 from bson.objectid import ObjectId
+from bson.son import SON
 from django.db import models
 
 from . import mongo_client
@@ -136,3 +137,20 @@ class Aggregator(object):
       res.append({'name': Photographer.find_by_id(kv['_id'])['name'],
                   'count': kv['value']})
     return res
+
+  @staticmethod
+  def popular_trusted_cameras():
+    pipeline = [
+      { "$group": { "_id" : "$photographer", "cameras": {"$addToSet": "$camera"} } },
+      { "$project": { "_id": 1, "cameras": 1, "ccount": { "$gt" : [ { "$size" : "$cameras" }, 1 ] } } },
+      { "$match": { "ccount" : True } },
+      { "$unwind": "$cameras" },
+      { "$group": { "_id": "$cameras", "phs": {"$addToSet": "$_id"} } },
+      { "$project": { "_id": 1, "phs": 1, "phcount": {"$size": "$phs"} } },
+      { "$sort": SON([("phcount", -1), ("_id.name", 1)]) }
+    ]
+    agg = list(mongo_client.photo.photo.aggregate(pipeline))
+    for obj in agg:
+      obj['name'] = obj['_id']['name']
+      obj['count'] = obj['phcount']
+    return agg

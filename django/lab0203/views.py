@@ -81,3 +81,10 @@ class PPListView(ListView):
 
   def get_queryset(self):
     return Aggregator.photographer_shots_count()
+
+
+class AggregateListView(ListView):
+  template_name = 'photo/trusted_cameras.html'
+
+  def get_queryset(self):
+    return Aggregator.popular_trusted_cameras()

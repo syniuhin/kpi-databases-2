@@ -20,6 +20,7 @@
 					<button type="submit" class="btn btn-danger" name="deletebtn">Delete</button>
 				</div>
 				<div class="col-lg-6" align="right">
+					<a type="button" class="btn btn-info" name="tc_button" href="{% url 'tc_list' %}">Trusted cams</a>
 					<a type="button" class="btn btn-info" name="pc_button" href="{% url 'pa_list' %}">Apertures</a>
 					<a type="button" class="btn btn-info" name="pl_button" href="{% url 'pp_list' %}">Photos taken</a>
 					<a type="button" class="btn btn-success" name="add_button" href="{% url 'new_photo' %}">Add</a>
@@ -33,7 +34,7 @@
 						<tr>
 							<th></th>
 							<th class="header"> Name <i class="icon-sort"></i></th>
-							<th class="header"><a href="/photographer/list/filter">Photographer </a><i class="icon-sort"></i>
+							<th class="header"><a href="/photographer/shots">Photographer </a><i class="icon-sort"></i>
 							</th>
 							<th class="header"> Camera <i class="icon-sort"></i></th>
 							<th class="header"> Location <i class="icon-sort"></i></th>
