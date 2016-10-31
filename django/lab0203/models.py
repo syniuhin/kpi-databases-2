@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
 
+from bson.code import Code
 from bson.objectid import ObjectId
 from django.db import models
 
@@ -90,3 +91,48 @@ class Photographer(object):
   def choices():
     return [(ph['_id'], ph['name'])
             for ph in mongo_client.photo.photographer.find()]
+
+
+class Aggregator(object):
+
+  @staticmethod
+  def photographer_mean_aperture():
+    mapper = Code("""
+      function() {
+        if ("aperture" in this) {
+          emit(this.photographer, this.aperture);
+        }
+      }
+    """)
+    reducer = Code("""
+      function(k, vs) {
+        return Array.sum(vs) / vs.length;
+      }
+    """)
+    raw = mongo_client.photo.photo.map_reduce(mapper, reducer,
+                                              "photographer_aps").find()
+    res = []
+    for kv in raw:
+      res.append({'name': Photographer.find_by_id(kv['_id'])['name'],
+                  'mean': kv['value']})
+    return res
+
+  @staticmethod
+  def photographer_shots_count():
+    mapper = Code("""
+      function() {
+        emit(this.photographer, 1);
+      }
+    """)
+    reducer = Code("""
+      function(k, vs) {
+        return Array.sum(vs);
+      }
+    """)
+    raw = mongo_client.photo.photo.map_reduce(mapper, reducer,
+                                              "photographer_phs").find()
+    res = []
+    for kv in raw:
+      res.append({'name': Photographer.find_by_id(kv['_id'])['name'],
+                  'count': kv['value']})
+    return res
