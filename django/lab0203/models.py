@@ -13,13 +13,51 @@ class Photo(object):
     query = mongo_client.photo.photo.find()
     photos = []
     for ph in query:
-      ph_id = ph['photographer']
-      ph['photographer'] = Photographer.find_by_id(ph_id)
-      photos.append(ph)
+      photos.append(Photo._prepare_for_view(ph))
     return photos
 
   @staticmethod
+  def form_instance(str_id):
+    instance = mongo_client.photo.photo.find_one({'_id': ObjectId(str_id)})
+    if instance:
+      instance = Photo._prepare_for_form(instance)
+    return instance
+
+  @staticmethod
   def insert(data):
+    data = Photo._prepare_for_insert(data)
+    mongo_client.photo.photo.insert_one(data)
+
+  @staticmethod
+  def update(str_id, data):
+    data = Photo._prepare_for_update(data)
+    mongo_client.photo.photo.update_one({'_id': ObjectId(str_id)},
+                                        {"$set": data})
+
+  @staticmethod
+  def delete(str_id):
+    mongo_client.photo.photo.delete_one({'_id': ObjectId(str_id)})
+
+  @staticmethod
+  def _prepare_for_view(ph):
+    ph['id'] = ph['_id']
+    ph_id = ph['photographer']
+    ph['photographer'] = Photographer.find_by_id(ph_id)
+    print ph
+    return ph
+
+  @staticmethod
+  def _prepare_for_form(instance):
+    ph = Photographer.find_by_id(instance['photographer'])
+    instance['photographer'] = ph['_id']
+    if 'camera' in instance and instance['camera']:
+      instance['camera'] = instance['camera']['name']
+    if 'location' in instance and instance['location']:
+      instance['location'] = instance['location']['name']
+    return instance
+
+  @staticmethod
+  def _prepare_for_insert(data):
     # Wrap form data
     if len(data['location']) > 0:
       data['location'] = {"name": data['location']}
@@ -27,7 +65,19 @@ class Photo(object):
       data['camera'] = {"name": data['camera']}
     data = {k: v for k, v in data.items() if v}
     data['photographer'] = ObjectId(data['photographer'])
-    mongo_client.photo.photo.insert_one(data)
+    return data
+
+  @staticmethod
+  def _prepare_for_update(data):
+    if len(data['location']) > 0:
+      data['location.name'] = data['location']
+    del data['location']
+    if len(data['camera']) > 0:
+      data['camera.name'] = data['camera']
+    del data['camera']
+    data = {k: v for k, v in data.items() if v}
+    data['photographer'] = ObjectId(data['photographer'])
+    return data
 
 
 class Photographer(object):

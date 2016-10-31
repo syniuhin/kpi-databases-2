@@ -30,13 +30,13 @@ class PhotoController:
 
   @staticmethod
   def update(request, photo_id):
-    photo = Photo.objects.get(pk=photo_id)
+    photo = Photo.form_instance(photo_id)
     if request.method == 'GET':
-      form = PhotoForm(instance=photo)
+      form = PhotoForm(photo)
     elif request.method == 'POST':
-      form = PhotoForm(request.POST, instance=photo)
+      form = PhotoForm(request.POST)
       if form.is_valid():
-        form.save()
+        Photo.update(photo_id, form.cleaned_data)
         return HttpResponseRedirect('/photo/list/')
     return render(request, 'photo/form.html',
                   {'form': form,
@@ -45,6 +45,7 @@ class PhotoController:
   @staticmethod
   def clicked(request):
     if request.method == 'POST':
+      print request.POST
       if 'editbtn' in request.POST:
         url = reverse(
             'update_photo', kwargs={'photo_id': request.POST['tableradio']})
@@ -57,8 +58,7 @@ class PhotoController:
 
   @staticmethod
   def delete(request, photo_id):
-    photo = Photo.objects.get(pk=photo_id)
-    photo.delete()
+    Photo.delete(photo_id)
     return HttpResponseRedirect('/photo/list/')
 
 
