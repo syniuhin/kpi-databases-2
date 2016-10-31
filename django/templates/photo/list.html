@@ -12,17 +12,6 @@
 </head>
 <body>
 <h1 class="text-center">Photos</h1>
-<div class="navbar">
-        <div class="col-lg-4"></div>
-        <div class="col-lg-4"></div>
-        <div class="col-lg-4" align="right">
-            <form action="/photo/list/event" method="post">
-                {% csrf_token %}
-                    {{ event_form }}
-                    <input type="submit" class="btn btn-default" value="Reschedule">
-            </form>
-        </div>
-</div>
 <form action="/photo/clicked/" method="post">
     {% csrf_token %}
     <div class="navbar-header col-lg-12"
@@ -48,15 +37,6 @@
                 <a type="button" class="btn btn-success" name="add_button"
                    href="{% url 'new_photo' %}">Add
                 </a>
-                <a type="button" class="btn btn-primary" name="filterbtn"
-                   href="{% url 'photo_list_filter' %}">Filter</a>
-                <a href="{% url 'toggle_trigger' %}" class="btn btn-default">
-                    {% if trigger_enabled %}
-                        Disable trigger
-                    {% else %}
-                        Enable trigger
-                    {% endif %}
-                </a>
             </div>
         </div>
     </div>
@@ -72,13 +52,8 @@
                         Photographer </a><i
                             class="icon-sort"></i>
                     </th>
-                    <th class="header"><a href="/camera/list/filter">
-                        Camera </a><i
-                            class="icon-sort"></i></th>
-                    <th class="header"><a href="/location/list/filter">
-                        Location </a><i
-                            class="icon-sort"></i>
-                    </th>
+                    <th class="header"> Camera <i class="icon-sort"></i></th>
+                    <th class="header"> Location <i class="icon-sort"></i></th>
                     <th class="header"> Aperture <i class="icon-sort"></i></th>
                     <th class="header"> ISO <i class="icon-sort"></i></th>
                     <th class="header"> Shot time <i class="icon-sort"></i></th>
@@ -96,9 +71,9 @@
                             </div>
                         </td>
                         <td>{{ p.name }}</td>
-                        <td>{{ p.photographer }}</td>
-                        <td>{{ p.camera }}</td>
-                        <td>{{ p.location }}</td>
+                        <td>{{ p.photographer.name }}</td>
+                        <td>{{ p.camera.name }}</td>
+                        <td>{{ p.location.name }}</td>
                         <td>{{ p.aperture }}</td>
                         <td>{{ p.iso }}</td>
                         <td>{{ p.shot_time }}</td>
