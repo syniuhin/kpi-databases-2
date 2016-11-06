@@ -74,7 +74,10 @@ class PhotoListView(FormMixin, ListView):
     if len(querystr) > 0:
       self.querydict = QueryDict(querystr)
       if 'q' in self.querydict:
-        self.form = self.get_form_class()(self.querydict)
+        self.form = self.get_form_class()({
+            'search': self.querydict['q'],
+            'page': self.querydict['page'],
+        })
       if 'page' in self.querydict:
         page_num = self.querydict['page']
     if not hasattr(self, 'form'):
@@ -93,9 +96,13 @@ class PhotoListView(FormMixin, ListView):
     # From ProcessFormMixin
     self.form = self.get_form_class()(request.POST)
     if self.form.is_valid():
-      url = reverse('photo_search') + '?' + urllib.urlencode(
-          {'q': self.form.cleaned_data['search'],
-           'page': 0})
+      d = self.form.cleaned_data
+      if 'search' in d and len(d['search']) > 0:
+        url = reverse('photo_search') + '?' + urllib.urlencode(
+            {'q': d['search'],
+            'page': d['page'] if d['page'] else 0,})
+      else:
+        url = reverse('photo_list', kwargs={'page_id': d['page']})
       return HttpResponseRedirect(url)
 
     # From BaseListView

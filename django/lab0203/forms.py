@@ -19,3 +19,4 @@ class PhotoForm(forms.Form):
 
 class PhotoSearchForm(forms.Form):
   search = forms.CharField(label='Search', max_length=255, required=False)
+  page = forms.IntegerField(label='Page', min_value=0, required=False)

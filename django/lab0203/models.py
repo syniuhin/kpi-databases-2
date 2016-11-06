@@ -41,7 +41,7 @@ class Photo(object):
     return photos
 
   @staticmethod
-  def search(search_query, page=0):
+  def search(search_query, page):
     redis_key = 'search: %s page: %d' % (search_query, page)
     cached_res = redis_instance.get(redis_key)
     if cached_res:
