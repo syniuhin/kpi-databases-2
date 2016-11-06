@@ -24,19 +24,25 @@ class Photo(object):
 
   @staticmethod
   def page(i):
-    paged_id = redis_instance.get('page: %d' % i)
+    redis_key = 'page: %d' % i
+    paged_id = redis_instance.get(redis_key)
     if paged_id:
       query = mongo_client.photo.photo.aggregate([
-          {"$match": {"_id": {"$gt": ObjectId(paged_id)}}},
-          {"$limit": page_size}
+          {"$match": {"_id": {"$gte": ObjectId(paged_id)}}},
+          {"$sort": SON([("_id", 1)])},
+          {"$limit": page_size},
       ])
     else:
-      query = mongo_client.photo.photo.find().skip(i *
-                                                   page_size).limit(page_size)
-      if query.count(with_limit_and_skip=True) > 0:
-        redis_instance.set('page: %d' % i, query[0]['_id'])
+      query = mongo_client.photo.photo.aggregate([
+          {"$sort": SON([("_id", 1)])},
+          {"$skip": i * page_size},
+          {"$limit": page_size},
+      ])
     photos = []
     for ph in query:
+      if not paged_id:
+        paged_id = ph['_id']
+        redis_instance.set(redis_key, paged_id)
       photos.append(Photo._prepare_for_view(ph))
     return photos
 
@@ -61,13 +67,14 @@ class Photo(object):
   @staticmethod
   def delete(str_id):
     mongo_client.photo.photo.delete_one({'_id': ObjectId(str_id)})
+    # TODO: Think about deleting by pattern in keys
+    redis_instance.flushall()
 
   @staticmethod
   def _prepare_for_view(ph):
     ph['id'] = ph['_id']
     ph_id = ph['photographer']
     ph['photographer'] = Photographer.find_by_id(ph_id)
-    print ph
     return ph
 
   @staticmethod
