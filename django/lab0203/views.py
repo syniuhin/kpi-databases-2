@@ -1,10 +1,11 @@
 from django.contrib import messages
 from django.core.urlresolvers import reverse
 from django.db.models import Q
-from django.http import HttpResponseRedirect, HttpResponseBadRequest, Http404
+from django.http import HttpResponseRedirect, HttpResponseBadRequest, Http404, QueryDict
 from django.shortcuts import render
 from django.views.generic.edit import FormMixin
 from django.views.generic.list import ListView
+import urllib
 
 from .forms import PhotoForm, PhotoSearchForm
 from .models import Aggregator, Photo, Photographer
@@ -68,42 +69,46 @@ class PhotoListView(FormMixin, ListView):
 
   def get(self, request, *args, **kwargs):
     # From ProcessFormMixin
-    form_class = self.get_form_class()
-    self.form = self.get_form(form_class)
+    querystr = request.META['QUERY_STRING']
+    page_num = 0
+    if len(querystr) > 0:
+      self.querydict = QueryDict(querystr)
+      if 'q' in self.querydict:
+        self.form = self.get_form_class()(self.querydict)
+      if 'page' in self.querydict:
+        page_num = self.querydict['page']
+    if not hasattr(self, 'form'):
+      self.form = self.get_form(self.get_form_class())
 
     # From BaseListView
     self.object_list = self.get_queryset()
-    allow_empty = self.get_allow_empty()
-    if not allow_empty and len(self.object_list) == 0:
-      raise Http404(u"Empty list and '%(class_name)s.allow_empty' is False." %
-                    {'class_name': self.__class__.__name__})
-
     context = self.get_context_data(
         object_list=self.object_list, form=self.form)
-    context['page_num'] = kwargs['page_id']
+    if 'page_id' in kwargs:
+      page_num = kwargs['page_id']
+    context['page_num'] = page_num
     return self.render_to_response(context)
 
   def post(self, request):
     # From ProcessFormMixin
     self.form = self.get_form_class()(request.POST)
     if self.form.is_valid():
-      self.cleaned_data = self.form.cleaned_data
+      url = reverse('photo_search') + '?' + urllib.urlencode(
+          {'q': self.form.cleaned_data['search'],
+           'page': 0})
+      return HttpResponseRedirect(url)
 
     # From BaseListView
     self.object_list = self.get_queryset()
-    allow_empty = self.get_allow_empty()
-    if not allow_empty and len(self.object_list) == 0:
-      raise Http404(u"Empty list and '%(class_name)s.allow_empty' is False." %
-                    {'class_name': self.__class__.__name__})
-
     context = self.get_context_data(
         object_list=self.object_list, form=self.form)
     return self.render_to_response(context)
 
   def get_queryset(self):
-    if hasattr(self, 'cleaned_data'):
-      search = self.cleaned_data.get('search')
-      return Photo.search(search)
+    if hasattr(self, 'querydict'):
+      search = self.querydict.get('q') if 'q' in self.querydict else ''
+      page = int(self.querydict.get('page')) if 'page' in self.querydict else 0
+      return Photo.search(search, page)
     return Photo.page(
         int(self.kwargs['page_id']) if len(self.kwargs['page_id']) > 0 else 0)
 

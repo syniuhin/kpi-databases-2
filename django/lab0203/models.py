@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
 
+from bson import json_util
 from bson.code import Code
 from bson.objectid import ObjectId
 from bson.son import SON
@@ -25,39 +26,37 @@ class Photo(object):
   @staticmethod
   def page(i):
     redis_key = 'page: %d' % i
-    paged_id = redis_instance.get(redis_key)
-    if paged_id:
-      query = mongo_client.photo.photo.aggregate([
-          {"$match": {"_id": {"$gte": ObjectId(paged_id)}}},
-          {"$sort": SON([("_id", 1)])},
-          {"$limit": page_size},
-      ])
-    else:
-      query = mongo_client.photo.photo.aggregate([
-          {"$sort": SON([("_id", 1)])},
-          {"$skip": i * page_size},
-          {"$limit": page_size},
-      ])
+    paged_data = redis_instance.get(redis_key)
+    if paged_data:
+      return json_util.loads(paged_data)
+    query = mongo_client.photo.photo.aggregate([
+        {"$sort": SON([("_id", 1)])},
+        {"$skip": i * page_size},
+        {"$limit": page_size},
+    ])
     photos = []
     for ph in query:
-      if not paged_id:
-        paged_id = ph['_id']
-        redis_instance.set(redis_key, paged_id)
       photos.append(Photo._prepare_for_view(ph))
+    redis_instance.set(redis_key, json_util.dumps(photos))
     return photos
 
   @staticmethod
-  def search(search_query):
-    redis_key = 'search: %s' % search_query
+  def search(search_query, page=0):
+    redis_key = 'search: %s page: %d' % (search_query, page)
     cached_res = redis_instance.get(redis_key)
     if cached_res:
-      return cached_res
+      return json_util.loads(cached_res)
     # TODO: Page search results
-    query = mongo_client.photo.photo.find({"$text": {"$search": search_query}})
+    query = mongo_client.photo.photo.aggregate([
+        {"$match": {"$text": {"$search": search_query}}},
+        {"$sort": SON([("_id", 1)])},
+        {"$skip": page * page_size},
+        {"$limit": page_size},
+    ])
     photos = []
     for ph in query:
       photos.append(Photo._prepare_for_view(ph))
-    redis_instance.set(redis_key, photos)
+    redis_instance.set(redis_key, json_util.dumps(photos))
     return photos
 
   @staticmethod
@@ -71,12 +70,17 @@ class Photo(object):
   def insert(data):
     data = Photo._prepare_for_insert(data)
     mongo_client.photo.photo.insert_one(data)
+    # TODO: Think about smarter way to invalidate appropriate cache
+    for k in redis_instance.keys('search:*'):
+      redis_instance.delete(k)
 
   @staticmethod
   def update(str_id, data):
     data = Photo._prepare_for_update(data)
     mongo_client.photo.photo.update_one({'_id': ObjectId(str_id)},
                                         {"$set": data})
+    # TODO: Think about smarter way to invalidate appropriate cache
+    redis_instance.flushall()
 
   @staticmethod
   def delete(str_id):
