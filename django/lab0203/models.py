@@ -4,15 +4,37 @@ from bson.code import Code
 from bson.objectid import ObjectId
 from bson.son import SON
 from django.db import models
+import redis
 
 from . import mongo_client
 
+
+redis_instance = redis.StrictRedis()
+page_size = 30
 
 class Photo(object):
 
   @staticmethod
   def all():
     query = mongo_client.photo.photo.find()
+    photos = []
+    for ph in query:
+      photos.append(Photo._prepare_for_view(ph))
+    return photos
+
+  @staticmethod
+  def page(i):
+    paged_id = redis_instance.get('page: %d' % i)
+    if paged_id:
+      query = mongo_client.photo.photo.aggregate([
+          {"$match": {"_id": {"$gt": ObjectId(paged_id)}}},
+          {"$limit": page_size}
+      ])
+    else:
+      query = mongo_client.photo.photo.find().skip(i *
+                                                   page_size).limit(page_size)
+      if query.count(with_limit_and_skip=True) > 0:
+        redis_instance.set('page: %d' % i, query[0]['_id'])
     photos = []
     for ph in query:
       photos.append(Photo._prepare_for_view(ph))

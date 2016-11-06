@@ -66,7 +66,8 @@ class PhotoListView(ListView):
   template_name = 'photo/list.html'
 
   def get_queryset(self):
-    return Photo.all()
+    return Photo.page(
+        int(self.kwargs['page_id']) if len(self.kwargs['page_id']) > 0 else 0)
 
 
 class PAListView(ListView):
