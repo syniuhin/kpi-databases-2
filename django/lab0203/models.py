@@ -47,6 +47,20 @@ class Photo(object):
     return photos
 
   @staticmethod
+  def search(search_query):
+    redis_key = 'search: %s' % search_query
+    cached_res = redis_instance.get(redis_key)
+    if cached_res:
+      return cached_res
+    # TODO: Page search results
+    query = mongo_client.photo.photo.find({"$text": {"$search": search_query}})
+    photos = []
+    for ph in query:
+      photos.append(Photo._prepare_for_view(ph))
+    redis_instance.set(redis_key, photos)
+    return photos
+
+  @staticmethod
   def form_instance(str_id):
     instance = mongo_client.photo.photo.find_one({'_id': ObjectId(str_id)})
     if instance:

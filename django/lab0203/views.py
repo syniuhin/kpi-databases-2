@@ -6,7 +6,7 @@ from django.shortcuts import render
 from django.views.generic.edit import FormMixin
 from django.views.generic.list import ListView
 
-from .forms import PhotoForm
+from .forms import PhotoForm, PhotoSearchForm
 from .models import Aggregator, Photo, Photographer
 
 
@@ -62,10 +62,48 @@ class PhotoController(object):
     return HttpResponseRedirect('/photo/list/')
 
 
-class PhotoListView(ListView):
+class PhotoListView(FormMixin, ListView):
   template_name = 'photo/list.html'
+  form_class = PhotoSearchForm
+
+  def get(self, request, *args, **kwargs):
+    # From ProcessFormMixin
+    form_class = self.get_form_class()
+    self.form = self.get_form(form_class)
+
+    # From BaseListView
+    self.object_list = self.get_queryset()
+    allow_empty = self.get_allow_empty()
+    if not allow_empty and len(self.object_list) == 0:
+      raise Http404(u"Empty list and '%(class_name)s.allow_empty' is False." %
+                    {'class_name': self.__class__.__name__})
+
+    context = self.get_context_data(
+        object_list=self.object_list, form=self.form)
+    context['page_num'] = kwargs['page_id']
+    return self.render_to_response(context)
+
+  def post(self, request):
+    # From ProcessFormMixin
+    self.form = self.get_form_class()(request.POST)
+    if self.form.is_valid():
+      self.cleaned_data = self.form.cleaned_data
+
+    # From BaseListView
+    self.object_list = self.get_queryset()
+    allow_empty = self.get_allow_empty()
+    if not allow_empty and len(self.object_list) == 0:
+      raise Http404(u"Empty list and '%(class_name)s.allow_empty' is False." %
+                    {'class_name': self.__class__.__name__})
+
+    context = self.get_context_data(
+        object_list=self.object_list, form=self.form)
+    return self.render_to_response(context)
 
   def get_queryset(self):
+    if hasattr(self, 'cleaned_data'):
+      search = self.cleaned_data.get('search')
+      return Photo.search(search)
     return Photo.page(
         int(self.kwargs['page_id']) if len(self.kwargs['page_id']) > 0 else 0)
 
