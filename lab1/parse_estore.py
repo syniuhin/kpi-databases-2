@@ -4,8 +4,7 @@ from lxml import etree
 
 from gen_xml import process_text
 
-BASE_URL = 'http://mebli-lviv.com.ua'
-HEADERS = {'User-Agent': 'Chrome 54.0.2840.71'}
+BASE_URL = 'http://www.odissey.kiev.ua/'
 
 
 class Product:
@@ -23,50 +22,34 @@ class Product:
     return self.name.encode('utf-8')
 
 
-def parse_table(url):
-  request = urllib2.Request(url, headers=HEADERS)
-  page = urllib2.urlopen(request).read()
+def parse_html(url):
+  response = urllib2.urlopen(BASE_URL + url)
+  page = response.read()
 
   tree = etree.HTML(page.decode("cp1251").encode('utf-8'))
 
-  products = []
-  tds = tree.xpath("//td")
-  duvans = filter(
-      lambda duvan: len(duvan.xpath("h3/a/@href")) > 0 and duvan.xpath("h3/a/@href")[0].startswith('duvan_'),
-      tds)
-  for duvan in duvans:
-    name = duvan.xpath("h3/a/text()")
-    price = duvan.xpath("//div[@class='image_title']/text()")
-    desc = '-'  #TODO: Parse it from the subpage.
-    image = duvan.xpath("//img/@src")
-    products.append(Product(name, price, desc, image))
-  return products
+  # Set of hardcode hacks
+  name = tree.xpath("string(//div[@itemprop='name']/h1/text())")
+  price = tree.xpath("string(//div[@id='optionPrice']/text())")
+  image = tree.xpath("string(//img[@class='thumbnail']/@src)")
+  desc = tree.xpath(
+      "//div[@style='overflow-x: auto']/span[@itemprop='description']//text()")
 
+  process_text(desc)
+  desc = reduce(lambda a, x: a + x, desc)
 
-def parse_product(url):
-  print "Parsing product for %s" % url
-  request = urllib2.Request(url, headers=HEADERS)
-  page = urllib2.urlopen(request).read()
-
-  tree = etree.HTML(page.decode("cp1251").encode('utf-8'))
-  name = tree.xpath("//h1/text()")
-  price = tree.xpath("//span[@class='price_main']/big/b/text()")
-  image_sources = tree.xpath("//img[@id='image_src']/@src")
-  print image_sources
-  image = filter(
-      lambda src: src.startswith('http://mebli-lviv.com.ua/makethumb.php?pic'),
-      image_sources)[0]
-  desc = 'BULLSHIT'  #tree.xpath(
-  #"//div[@style='overflow-x: auto']/span[@itemprop='description']//text()")
-
-  #process_text(desc)
-  #desc = reduce(lambda a, x: a + x, desc)
-  return Product(name, price, desc, image)
+  return Product(name, price, desc, BASE_URL + image)
 
 
 def generate_xml(filename):
-  products = parse_table(BASE_URL + '/dyvanu_pryami')
-
+  page = urllib2.urlopen(BASE_URL).read()
+  tree = etree.HTML(page)
+  # Remove duplicates
+  urls = set(tree.xpath('//a/@href'))
+  urls = filter(lambda x: x.startswith('product'), urls)[:20]
+  products = []
+  for url in urls:
+    products.append(parse_html(url))
   root = etree.Element("data")
 
   for product in products:
@@ -92,7 +75,7 @@ def generate_xml(filename):
     root.append(product_el)
 
   et = etree.ElementTree(root)
-  et.write(filename, encoding="utf-8", xml_declaration=True, pretty_print=True)
+  et.write(filename, encoding='utf-8', xml_declaration=True, pretty_print=True)
 
 
-generate_xml("products.xml")
+generate_xml('products.xml')
