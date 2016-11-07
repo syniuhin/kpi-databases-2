@@ -42,7 +42,7 @@ class Photo(object):
 
   @staticmethod
   def search(search_query, page):
-    redis_key = 'search: %s page: %d' % (search_query, page)
+    redis_key = 'search: &%s& page: %d' % (search_query, page)
     cached_res = redis_instance.get(redis_key)
     if cached_res:
       return json_util.loads(cached_res)
@@ -69,24 +69,38 @@ class Photo(object):
   @staticmethod
   def insert(data):
     data = Photo._prepare_for_insert(data)
-    mongo_client.photo.photo.insert_one(data)
-    # TODO: Think about smarter way to invalidate appropriate cache
-    for k in redis_instance.keys('search:*'):
-      redis_instance.delete(k)
+    str_id = mongo_client.photo.photo.insert_one(data)
+    # Invalidate searches which may have the inserted item
+    Photo._invalidate_item(str_id)
+    # Since inserted item is always last in page view, we have to invalidate
+    # just the last one. TODO: Think about id -> page mapping.
 
   @staticmethod
   def update(str_id, data):
     data = Photo._prepare_for_update(data)
+    Photo._invalidate_item(str_id)
+    # TODO: Think about whether we need to process pages smarter
+    pages = redis_instance.keys('page:*')
+    redis_instance.delete(*pages)
     mongo_client.photo.photo.update_one({'_id': ObjectId(str_id)},
                                         {"$set": data})
-    # TODO: Think about smarter way to invalidate appropriate cache
-    redis_instance.flushall()
+    # Invalidate with regards to updated data
+    Photo._invalidate_item(str_id)
 
   @staticmethod
   def delete(str_id):
+    Photo._invalidate_item(str_id)
+    pages = redis_instance.keys('page:*')
+    redis_instance.delete(*pages)
     mongo_client.photo.photo.delete_one({'_id': ObjectId(str_id)})
-    # TODO: Think about deleting by pattern in keys
-    redis_instance.flushall()
+
+  @staticmethod
+  def _invalidate_item(str_id):
+    for rkey in redis_instance.keys('search:*'):
+      search = rkey.split('&')[1]
+      if mongo_client.photo.photo.find_one({'_id': ObjectId(str_id),
+                                            '$text': {'$search': search}}):
+        redis_instance.delete(rkey)
 
   @staticmethod
   def _prepare_for_view(ph):
